@@ -1,0 +1,95 @@
+---
+- name: Python minikube
+  hosts: localhost
+  gather_facts: False
+
+  vars:
+
+    ansible_python_interpreter: '{{ ansible_playbook_python }}'
+    image_name:  flask-proj
+    image_tag: 1.0
+    replicas: 2
+
+  pre_tasks:
+
+    - name: check the status of minikube.
+      command: minikube status
+      register: minikube_status
+      changed_when: false
+      ignore_errors: true
+
+    - name: start minikube if it's not running.
+      command: minikube start --vm = true
+      when: "not minikube_status.stdout or 'Running' not in minikube_status.stdout"
+
+  tasks:
+
+    - name: get existing image hash.
+      shell: |
+        eval $(minikube docker-env)
+        docker images -q {{  image_name }}
+      register: image_hash
+      changed_when: false
+
+    - name: build image if it's not already built. 
+      shell: | 
+        eval $(minikube docker-env)
+        docker build -t {{ image_name }}:{{ image_tag }} .
+      when: not image_hash.stdout
+
+    - name: create a deployment for Flask Python Code.
+      k8s:
+        state: present
+        definition:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: flask-proj
+            namespace: default
+          spec:
+            replicas: "{{ replicas }}"
+            selector:
+              matchLabels:
+                app: flask-proj
+            template:
+              metadata:
+                labels:
+                  app: flask-proj
+              spec:
+                containers:
+                - name: flask-proj
+                  image: "{{ image_name }}:{{ image_tag }}"
+                  imagePullPolicy: IfNotPresent
+                  ports:
+                  - containerPort: 5000
+
+    - name: create a Service for App.
+      k8s:
+        state: present
+        definition:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: flask-proj
+            namespace: default
+          spec:
+            type: LoadBalancer
+            ports:
+            - port: 5000
+              targetPort: 5000
+            selector:
+              app: flask-proj
+
+  post_tasks:
+
+    - name: exposing app on the host via Minikube.
+      command: minikube service flask-proj --url
+      changed_when: false
+      register: minikube_service
+
+    - debug:
+        msg: "App URL: {{ minikube_service['stdout_lines'][0] }}"
+     
+    - name: Opening app in google chrome
+      shell: open -a "Google Chrome" {{ minikube_service['stdout_lines'][0] }}
+
