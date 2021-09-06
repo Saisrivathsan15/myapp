@@ -6,7 +6,7 @@ pipeline{
     stages{
         stage("SCM Checkout"){
             steps{
-                git branch: 'main', credentialsId: 'ed4599ca-c0c2-4da2-b1f6-ac85d73a02fa', url: 'https://github.com/Saisrivathsan15/myapp.git'
+                git branch: 'main', credentialsId: '6Septaccess', url: 'https://github.com/Saisrivathsan15/myapp.git'
             }
         }
         stage("Ansible playbook"){
