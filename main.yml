@@ -24,12 +24,12 @@
 
   tasks:
 
-    - name: get existing image hash.
-      shell: |
-        eval $(minikube docker-env)
-        docker images -q {{  image_name }}
-      register: image_hash
-      changed_when: false
+    #- name: get existing image hash.
+     # shell: |
+      #  eval $(minikube docker-env)
+       # docker images -q {{  image_name }}
+      #register: image_hash
+      #changed_when: false
 
     - name: Remove the image.
       shell: |
