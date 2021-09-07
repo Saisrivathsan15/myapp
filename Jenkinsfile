@@ -12,9 +12,8 @@ pipeline{
         stage("Ansible playbook"){
             steps{
                 sh 'echo $PATH'
+                ansiblePlaybook installation: 'ansible', inventory: 'hosts', playbook: 'main.yml'
                
-                
-                ansiblePlaybook extras: '--extra-vars {“image_tag”:“${NAME}”}', installation: 'ansible', inventory: 'hosts', playbook: 'main.yml'
             }
         }
         stage("Zoom chat connection webhook"){
