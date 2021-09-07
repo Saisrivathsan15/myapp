@@ -79,6 +79,11 @@
               targetPort: 5000
             selector:
               app: flask-proj
+              
+    - name: Remove the image.
+      shell: |
+        eval $(minikube docker-env)
+        docker image rm -f {{  image_name }}         
 
   post_tasks:
 
