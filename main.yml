@@ -31,11 +31,16 @@
       register: image_hash
       changed_when: false
 
+    - name: Remove the image.
+      shell: |
+        eval $(minikube docker-env)
+        docker image rm -f {{  image_name }}
+        
     - name: build image if it's not already built. 
       shell: | 
         eval $(minikube docker-env)
         docker build -t {{ image_name }}:{{ image_tag }} .
-      when: not image_hash.stdout
+      #when: not image_hash.stdout
 
     - name: create a deployment for Flask Python Code.
       k8s:
