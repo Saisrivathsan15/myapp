@@ -1,0 +1,40 @@
+---
+- name: creating and pushing new docker image 
+  hosts: all
+
+  vars:
+    app_path: ~/abhishek/git/django-todo-app
+    app_path_git: "https://github.com/abhisheksaran/django-todo-app"
+    image_name: abhitrone/django_prometheus
+    image_tag: tagVersion
+
+
+  tasks:
+    - name: find docker file 
+      find:
+        path: ../
+        file_type: file
+        patterns: "Dockerfile"
+      register: docker_file
+      failed_when: docker_file.matched != 1
+    
+    - debug:
+        msg: "{{docker_file}}"
+
+    - name: build new image
+      shell: "docker build -t {{image_name}}:{{image_tag}} ../"
+      register: build_image 
+      when: docker_file.matched == 1
+
+    - debug:
+        msg: "{{build_image}}"
+
+    - name: push new image
+      shell: "docker push {{image_name}}:{{image_tag}}"
+      register: push_image
+      when: build_image is successful 
+
+    - debug:
+        msg: "{{push_image}}"
+
+    

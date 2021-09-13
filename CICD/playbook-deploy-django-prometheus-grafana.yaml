@@ -1,0 +1,111 @@
+- name: deployment django app with Prometheus, and Grafana
+  hosts: all
+
+  vars:
+    namespace_name: prometheus-djangoapp
+
+  pre_tasks:
+    
+    - name: check the status of minikube 
+      command: minikube status
+      register: minikube_status
+      changed_when: false
+      ignore_errors: true
+
+    - name: start minikube if it's not running 
+      command: minikube start
+      when: "not minikube_status.stdout or 'Running' not in minikube_status.stdout"
+
+  tasks:
+
+    - name: get all namespace
+      command: kubectl get namespaces
+      register: minikube_namespaces
+
+    - name: create prometheus-djangoapp namespace if not there already
+      command: "kubectl create namespace {{namespace_name}}"
+      when: "'prometheus-djangoapp' not in minikube_namespaces.stdout"
+
+    - name: change context to the prometheus-djangoapp namespace
+      command: "kubectl config set-context --current --namespace={{namespace_name}}"
+
+    - name: "clear the namespace-{{namespace_name}}"
+      command: "kubectl delete all --all -n {{namespace_name}}"
+    
+    - name: deploy the django app in  kubernetes
+      shell: |
+        cd django 
+        chmod +x deploy-django.sh
+        ./deploy-django.sh
+      register: deploy_django
+
+    - name: deploy the prometheus service in kubernetes
+      shell: |
+        cd prometheus-djangoapp
+        chmod +x deploy-prometheus.sh
+        ./deploy-prometheus.sh
+      register: deploy_prometheus
+
+    - name: deploy the grafana service in kubernetes 
+      shell: | 
+        cd grafana
+        chmod +x deploy-grafana.sh
+        ./deploy-grafana.sh
+      register: deploy_grafana
+
+  post_tasks: 
+    
+    - debug:
+        msg: "deploy-django output: {{deploy_django}}"
+
+    - debug:
+        msg: "deploy-prometheus output: {{deploy_prometheus}}"
+
+    - debug:
+        msg: "deploy-grafana output: {{deploy_grafana}}"
+
+    - name: "get all resources in the {{namespace_name}} namespace"
+      command: "kubectl get all -n {{namespace_name}}"
+      register: get_all
+
+    - debug:
+        msg: "kubectl get all: {{get_all}}"
+    
+
+    - name: exposing the django-service 
+      command: "minikube service django-all-service --url -n {{namespace_name}}"
+      changed_when: false
+      register: minikube_django_service
+
+    - debug:
+        msg: "prometheus service URL: {{ minikube_django_service['stdout_lines'][0] }}"
+
+    - name: Opening the django app in google chrome
+      shell: "open -a 'Google Chrome' {{ minikube_django_service['stdout_lines'][0] }}"
+ 
+
+    - name: exposing the prometheus-service 
+      command: "minikube service prometheus --url -n {{namespace_name}}"
+      changed_when: false
+      register: minikube_prometheus_service
+
+    - debug:
+        msg: "prometheus service URL: {{ minikube_prometheus_service['stdout_lines'][0] }}"
+
+    - name: Opening the Prometheus UI in google chrome
+      shell: "open -a 'Google Chrome' {{ minikube_prometheus_service['stdout_lines'][0] }}"
+ 
+    - name: exposing the grafana-service 
+      command: "minikube service grafana --url -n {{namespace_name}}"
+      changed_when: false
+      register: minikube_grafana_service
+
+    - debug:
+        msg: "grafana service URL: {{ minikube_grafana_service['stdout_lines'][0] }}"
+
+    - name: Opening the Grafana UI in google chrome
+      shell: "open -a 'Google Chrome' {{ minikube_grafana_service['stdout_lines'][0] }}"
+        
+
+
+
