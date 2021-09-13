@@ -12,8 +12,8 @@ pipeline{
         stage("Ansible playbook"){
             steps{
                 sh 'echo $PATH'
-               
                 ansiblePlaybook installation: 'ansible', inventory: 'hosts', playbook: 'main.yml'
+               
             }
         }
         stage("Zoom chat connection webhook"){
